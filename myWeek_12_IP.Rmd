@@ -1,0 +1,554 @@
+# Nelson Muteti : Independent Project Week 9
+
+## 1.0 Defining the Question
+**A Kenyan entrepreneur has created an online cryptography course and wants to advertise it on her blog.**
+**She currently targets audiences originating from various countries. In the past, she ran ads to advertise**
+**a related course on the same blog and collected data in the process. She would now like to employ my** **services as a Data Science Consultant to help her identify which individuals are most likely to click**
+**on her ads**
+
+
+## 1.1 Defining Metrics for Success
+
+**A succesful project will clean the data provided, perform Univariate and Bivariate**
+**analysis of the variables and finally draw recommendations for the business.**
+
+## 1.3 Understanding The context.
+
+**The context here is an advertising one. We need to first understand how to measure the success rate of ads**
+**posted on a site**.
+
+## 1.4 Reading the data
+
+```{r}
+# first imports library data.table
+
+library(data.table)
+library(rmarkdown)
+```
+```{r}
+#fetch the data using fread()
+
+df = fread('http://bit.ly/IPAdvertisingData')
+```
+```R
+#output and get a glimpse of data
+
+head(df)
+```
+```{r,message=FALSE}
+#get the dimensions of the dataset
+
+dim(df)
+
+#data has 1000 rows and 10 columns
+
+```
+
+### 1.5 External Data Validation
+
+**I ensured that the data provided was logical and data types given matched the values in columns**
+
+```{r}
+#get summary statistics of the data
+
+summary(df)
+
+```
+```{r}
+#get data types of each column
+
+str(df)
+
+```
+
+**The target column is the "Clicked Ad " column.**
+
+**1 - Clicked the ad.**
+**0 - did not click the ad.**
+
+### Recode the factor variables
+
+```{r}
+df$`Clicked on Ad` <-factor(df$`Clicked on Ad`, levels = c(0, 1), labels = c('No click', 'Clicked'))
+df$Male <-factor(df$Male, levels = c(0, 1), labels = c('Female', 'Male'))
+
+#convert the Male and Clicked Ad columns to factors
+
+df$Male <- as.factor(df$Male)
+
+#identify levels of column Male
+
+levels(df$Male)
+```
+
+
+**Do the same for our target column**
+```{r}
+
+df$`Clicked on Ad` <- as.factor(df$`Clicked on Ad`)
+
+# identify levels of target column
+
+levels(df$`Clicked on Ad`)
+
+```
+```{r}
+#now check the summary of columns
+
+summary(df$`Clicked on Ad`)
+
+# 500 people clicked on the ad while 500 did not click on the ad
+
+```
+## 1.6 Data Cleaning
+
+**First, we will check for NA values in data.**
+
+```R
+# Now to check for NA values
+
+is.na(df) # outputs boolean / logic values. True when there is NA values 
+
+#           and False when there isn't
+
+```
+```{r}
+
+sum(is.na(df)) # checking for total count of NA values
+
+# the count is 0;meaning no missing values in data
+
+# now for a closer inspection of columns and any missing values 
+
+# that may have been skipped
+
+```
+```R
+colSums(is.na(df))
+
+# 0 missing values in each individual column
+
+```
+
+**Next we check for duplicated rows of data.**
+
+```{r}
+
+#we call the unique rows mydf
+
+mydf <- unique(df)
+
+#check if rows were dropped
+
+dim(mydf)
+
+# no rows were dropped since all unique values correspond to initial dataset dimensions
+
+```
+
+**Next we identify outliers in Numerical columns.**
+
+```{r}
+
+# first identify the numerical columns
+
+str(mydf)
+
+# Numerical Columns : Daily Time Spent on Site,Age, Area Income, Daily Internet Usage
+
+```
+
+**Use a boxplot to identify outliers.**
+```{r}
+
+boxplot(mydf$`Daily Time Spent on Site`,col = 'blue',main="Checking for outliers in Time spent on Site",xlab="Daily Time Spent on Site")
+
+# data points in this column seem to be well distributed
+```
+
+```{r}
+#Now lets get all the outlier data points from the column
+
+boxplot.stats(mydf$`Daily Time Spent on Site`)$out
+
+# there are 0 outliers here
+```
+
+**We do the same for the other two numerical columns.**
+
+```{r}
+
+boxplot(mydf$Age,col = 'red',main="Checking For Outliers in Age",xlab="Age")
+
+boxplot.stats(mydf$Age)$out
+
+```
+```{r}
+
+boxplot(mydf$`Area Income`,col = 'green',main="Checking for outliers in Area Income",xlab="Area Income")
+
+boxplot.stats(mydf$`Area Income`)$out
+
+length(boxplot.stats(mydf$`Area Income`)$out)
+
+```
+
+**8 outliers in the column.These few outliers will not have any effect on**
+
+**the data. They are important to the data.**
+```{r}
+
+boxplot(mydf$`Daily Internet Usage`,col = 'yellow',main="Checking for outliers in Internet Usage",xlab="Daily Internet Usage")
+
+boxplot.stats(mydf$`Daily Internet Usage`)$out
+
+```
+## 1.7 Univariate EDA
+
+**Now we proceed to Univariate EDA.**
+```{r}
+
+# first get measures of central tendency
+
+mean(mydf$`Daily Time Spent on Site`)
+
+median(mydf$`Daily Time Spent on Site`)
+
+```
+
+```{r}
+# function to get mode of data
+
+mymod <- function(v){uniqv <- unique(v)
+uniqv[which.max(tabulate(match(v,uniqv)))]
+
+}
+
+```
+
+```{r}
+mean(mydf$Age)
+
+# mean age of customers visiting site is 36
+```
+
+```{r}
+quantile(mydf$Age)
+
+# age distribution of customers on site by quantiles
+```
+
+```{r}
+mean(mydf$`Area Income`)
+
+quantile(mydf$`Area Income`)
+
+# majority of customers visiting the site are from the  middle class 
+
+```
+```{r}
+
+mymod(mydf$`Ad Topic Line`) # identify the most advertised topic
+
+#Cloned 5thgeneration orchestration was the most advertised Ad to customers visiting the site
+
+```
+```{r}
+mymod(mydf$City) # which is the most popular city of site visitors
+
+# Lisamouth is the most popular city 
+```
+```{r}
+
+sapply(mydf, function(x) length(unique(x))) # get unique values of each column
+
+#so there are 237 unique countries in the dataFrame
+
+```
+
+**Barplot for Gender in data.**
+
+```{r}
+
+df_gender <- mydf$Male
+
+df_gender <- table(df_gender)
+
+barplot(df_gender,col = 'blue',xlab = " Gender",ylab = "Count",main = "Gender Count in Data")
+
+```
+
+**Barplot for Ad clicks in data**
+
+```{r}
+
+df_click <- mydf$`Clicked on Ad`
+
+df_click <- table(df_click)
+
+barplot(df_click,col = 'red',xlab = " Clicked Ad ?",ylab = "Count",main = "Ad Click Count in Data")
+```
+
+
+
+**Age histogram**
+
+
+```{r}
+
+hist(mydf$Age,col = 'green',xlab = 'Ages',main = "Age Distribution in data",freq = FALSE)
+
+# include a Kernel density estimator line on Histogram
+
+dens <- density(mydf$Age)
+# include the KDE line
+lines(dens)
+
+```
+```{r}
+
+hist(mydf$`Daily Time Spent on Site`,col = 'red',xlab = 'Time Spend On Site',main = "Distribution Of Time Spend on site",freq = FALSE)
+
+# include a Kernel density estimator line on Histogram
+
+dens <- density(mydf$`Daily Time Spent on Site`)
+# include the KDE line
+lines(dens)
+```
+
+
+**Distribution of ages in data seems to be normal (bell - curve).**
+
+
+
+**Now lets get the ranges,standard Deviations, Variances  and skewness of various** **Numerical columns**
+
+```{r}
+#range of Age
+
+range(mydf$Age)
+
+```
+```{r}
+#variance of age
+
+var(mydf$Age)
+
+```
+```{r}
+# range of incomes
+
+range(mydf$`Area Income`)
+
+```
+```{r}
+# variance of incomes in data
+
+var(mydf$`Area Income`)
+
+```
+```{r}
+
+library(moments)
+```
+
+
+Now check for skewness and kurtosis of time spend on site and Internet usage columns
+
+
+```{r}
+
+skewness(mydf$`Daily Time Spent on Site`)
+
+```
+
+**Time spend on site has a negative skewness. This means that majority ****of data  points****are greater than the mean.On average, most people spend a lot of time on the** **site.**
+
+
+```{r}
+
+skewness(mydf$`Daily Internet Usage`)
+
+```
+
+
+**1.Daily Internet usage also has a negative skewness. This means that majority ****of data points****are greater than the mean.Most people visiting the site use more than the average daily internet**
+
+
+## 1.8.Bi-Variate Analysis
+
+**First, a side by side boxplot.**
+```{r}
+
+boxplot(Age ~ Male,data = mydf,main = "Ages by Gender")
+
+#the distribution of ages does not vary with gender
+```
+```{r}
+tapply(mydf$Age,mydf$Male,mean)
+
+# get the mean of ages grouped by gender..as we can see, mean does not vary with gender
+```
+
+
+**Get a side by side boxplot for ad clicks.**
+
+```{r}
+boxplot(`Daily Time Spent on Site`~`Clicked on Ad`,data = mydf,main = "Time On Site Against Clicking Ads")
+
+# it seems that people who spend less time on the site are more likely to click on
+
+# the ads
+```
+```{r}
+
+# Identify difference in times of people who either clicked or did not click ADs
+
+tapply(mydf$`Daily Time Spent on Site`,mydf$`Clicked on Ad`,mean)
+
+# the average time of people who clicked on ADs is considerably less than
+
+# those who did not click on ADs
+```
+
+```{r}
+
+boxplot(`Daily Internet Usage`~`Clicked on Ad`,data = mydf,main = "Internet Usage vs Clicking on Ads")
+
+# people with less daily internet usage were more likely to click an Ad
+```
+```{r}
+
+tapply(mydf$`Daily Internet Usage`,mydf$`Clicked on Ad`,mean)
+
+```
+
+
+**Distribution of age vs Income**
+
+```{r}
+
+boxplot(Age~`Area Income`,data = mydf,main = "Age Against Area Income")
+```
+
+
+
+**Find the correlation between age and are income.**
+
+```{r}
+
+cor(mydf$Age,mydf$`Area Income`)
+
+# weak negative correlation between age and income
+```
+
+
+
+**Distribution of time spend on site and daily internet usage.**
+```{r}
+
+plot(`Daily Time Spent on Site`~`Daily Internet Usage`,data = mydf,main = "Time Spend On Site Against Daily Internet Usage Of Customers")
+```
+
+
+
+Now find corrrelation between daily time spend on sight and internet usage
+```R
+
+cor(mydf$`Daily Time Spent on Site`,mydf$`Daily Internet Usage`)
+
+# there is a relatively moderate correlation between time spend on site and internet usage
+```
+
+
+**Now lets plot all scatter pairs for numeric variables.**
+
+```{r}
+
+mydf$Age <- as.numeric(mydf$Age)
+
+pairs(mydf[,-c(5,6,7,8,9,10)])
+
+# now we have all scatter plot pairs from the data
+
+```
+```{r}
+
+library(ggplot2)
+```
+```{r}
+ggplot(mydf,
+       aes(x = `Clicked on Ad`,
+           fill = Male))+
+  geom_bar(position = "dodge")+
+  labs(title = " Analysis of Ad Clicking by Gender")
+```
+
+
+
+## 1.9 .Multivariate analysis
+
+
+**Get the corrrelation matrix from the data.**
+```{r}
+
+cor(mydf[,-c(5,6,7,8,9,10)])
+
+# we can see that the area income and daily internet usage have a weak but positive
+
+# linear relationship
+
+# the daily time spend on site is also moderately correlated to the daily internet use
+```
+
+
+**Now lets get the multivariate aggregates of numerical variables.**
+
+```{r}
+
+aggregate(mydf$`Daily Time Spent on Site`~mydf$`Clicked on Ad`+mydf$Male,FUN = mean)
+```
+
+
+**Now lets get the number of people that clicked on ads given their gender only using a crosstab.**
+
+```{r}
+
+table(mydf$`Clicked on Ad`,mydf$Male)
+
+#relatively more females clicked on ADs. But this could be due to the reason that there were more women sampled
+```
+```{r}
+
+library(pch)
+```
+
+
+**Now lets investigate the relationship between clicking of ads and internet usage + time spend on site.**
+
+```{r}
+
+ggplot(mydf,
+       aes(x = `Daily Time Spent on Site`,
+           y = `Daily Internet Usage`,
+           color=`Clicked on Ad`))+
+  geom_point()+labs(title = "Time spend on site vs Internet usage on Clicking Ads")
+
+```
+
+
+## 2.0. Recommendations.
+
+
+**1.We can see that individuals who spend less time on the site and had less data per day were more likely to** **click on the ADs and had less data per day were more likely to click on the ADs.The Ad company should most** **probably target these individuals.** 
+
+
+**2.Since most of the customers visiting the site spend more time on the site than the** **average time spent, the Advertising team should consider pitching Ads that are** **relevant to the site or topic they are interested in.**
+
+## 2.1. Challenging The Solution.
+
+**The data acquired should probably have been more to do with the topics of the site**
+**visited rather than the clients visiting the site.**
+
+**This would have given has more clarity on the type of interests the customers have.**
+
